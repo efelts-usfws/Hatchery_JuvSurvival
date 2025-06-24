@@ -1,6 +1,7 @@
 library(tidyverse)
 library(RMark)
 
+
 # the inputs here are capture histories which are compiled using
 # code that's in my DNFH_Dashboard repository; basically for each 
 # fish look in PTAGIS for detections at each of the mainstem
@@ -235,3 +236,25 @@ test <- cjs.f(hatchery.name = "DWOR",
               spp="Steelhead",
               releasegroup = "Clearwater River",
               input.data=ch.dat25)
+
+# to iterate over all inputs set up a grid of the possible
+# combinations
+
+iteration.vars <- ch.dat25 |> 
+  group_by(hatchery,release_year,
+           species,release_group) |> 
+  tally() |> 
+  ungroup() |> 
+  select(hatchery.name=hatchery,
+         releaseyear=release_year,
+         spp=species,
+         releasegroup=release_group)
+
+# now run over all those groups 
+
+estimates25 <- pmap(iteration.vars,
+     cjs.f,
+     input.data=ch.dat25)
+
+test2 <- estimates25 |> 
+  bind_rows()
