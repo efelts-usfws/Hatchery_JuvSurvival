@@ -3,7 +3,7 @@ library(RMark)
 
 # the inputs here are capture histories which are compiled using
 # code that's in my DNFH_Dashboard repository; basically for each 
-# fish we look in PTAGIS for detections at each of the mainstem
+# fish look in PTAGIS for detections at each of the mainstem
 # dams and the towed estuary array; also, release groups are
 # distinguished (hatchery, release site, release date) so
 # they can be treated separately for survival estimates
@@ -11,7 +11,11 @@ library(RMark)
 # using 2025 data as an example of how to run these estimates, 
 # reading those in here
 
-ch.dat25 <- read_rds("data/travel")
+ch.dat25 <- read_rds("data/travel")|> 
+  mutate(capture_history=str_c("1",LGR_ch,LGS_ch,LOMO_ch,ICH_ch,
+                               MCN_ch,JD_ch,BONN_ch,
+                               TWX_ch,sep=""))
+
 
 # for now, just demonstrating one group, so filter steelhead
 # released from DNFH in the main clearwater
@@ -120,3 +124,114 @@ named.results <- mark.output$results$real |>
   left_join(row_key,by="rowname") |> 
   select(descriptor,category,estimate,se,lcl,ucl)
 
+# a typical additional step is to calculate total
+# survival by taking the product of all phi estimates,
+# except at the last step
+
+totalphi.df <- named.results %>% 
+  filter(category=="phi"&
+           !descriptor=="bon_twx_phi") %>% 
+  summarize(estimate=prod(estimate)) %>% 
+  mutate(descriptor="overall_phi",
+         category="phi",
+         se=as.numeric(NA),
+         lcl=as.numeric(NA),
+         ucl=as.numeric(NA)) %>% 
+  select(descriptor,category,estimate,se,lcl,ucl)
+
+# At the last step (Bonneville to the Towed Array)
+# survival and detection aren't separately estimable
+# so the approach here is to multiple the estimates provided
+# by RMark together to get a joint probability at
+# the last occasion.
+
+finaljoin.df <- named.results %>% 
+  filter(descriptor %in% c("bon_twx_phi","twx_p")) %>% 
+  summarize(estimate=prod(estimate)) %>% 
+  mutate(descriptor="final_joint",
+         category="final",
+         se=as.numeric(NA),
+         lcl=as.numeric(NA),
+         ucl=as.numeric(NA)) %>% 
+  select(descriptor,category,estimate,se,lcl,ucl)
+
+# now the final step is to remove the separate estimates
+# for confounded parameters then add the final joint probability
+
+named.results2 <- named.results %>% 
+  filter(!descriptor %in% c("bon_twx_phi","twx_p")) %>% 
+  bind_rows(totalphi.df,finaljoin.df) %>% 
+  select(descriptor,category,estimate,se,lcl,ucl)
+
+# with multiple groups and years it's worth defining
+# a function to iterate over
+
+cjs.f <- function(hatchery.name,
+                  releaseyear,spp,
+                  releasegroup,input.data){
+  
+  inp1 <-input.data %>% 
+    ungroup() %>% 
+    filter(hatchery==hatchery.name,
+           release_year==releaseyear&
+            release_group==releasegroup&
+             species==spp) %>% 
+    select(ch=capture_history,group=release_group)
+  
+  inp.processed <- process.data(inp1)
+  
+  inp.ddl <- make.design.data(inp.processed)
+  
+  time.cjs <- mark(inp.processed,
+                   inp.ddl,
+                   model.parameters = list(Phi=phi.time,
+                                           p=p.time),
+                   delete=TRUE)
+  
+  results1 <- time.cjs$results$real %>% 
+    remove_rownames() %>% 
+    rownames_to_column() %>% 
+    left_join(row_key,by="rowname") %>% 
+    select(descriptor,category,estimate,se,lcl,ucl)
+  
+  totalphi.df <- results1 %>% 
+    filter(category=="phi"&
+             !descriptor=="bon_twx_phi") %>% 
+    summarize(estimate=prod(estimate)) %>% 
+    mutate(descriptor="overall_phi",
+           category="phi",
+           se=as.numeric(NA),
+           lcl=as.numeric(NA),
+           ucl=as.numeric(NA)) %>% 
+    select(descriptor,category,estimate,se,lcl,ucl)
+  
+  finaljoin.df <- results1 %>% 
+    filter(descriptor %in% c("bon_twx_phi","twx_p")) %>% 
+    summarize(estimate=prod(estimate)) %>% 
+    mutate(descriptor="final_joint",
+           category="final",
+           se=as.numeric(NA),
+           lcl=as.numeric(NA),
+           ucl=as.numeric(NA)) %>% 
+    select(descriptor,category,estimate,se,lcl,ucl)
+  
+  results2 <- results1 %>% 
+    filter(!descriptor %in% c("bon_twx_phi","twx_p")) %>% 
+    bind_rows(totalphi.df,finaljoin.df) %>% 
+    mutate(hatchery=hatchery.name,species=spp,
+           release_year=releaseyear,release_group=releasegroup,
+           estimate_source="RMark") %>% 
+    select(hatchery,species,release_year,release_group,
+           descriptor,category,estimate,se,lcl,ucl,
+           estimate_source)
+  
+  
+}
+
+# test on dnfh steelhead
+
+test <- cjs.f(hatchery.name = "DWOR",
+              releaseyear = 2025,
+              spp="Steelhead",
+              releasegroup = "Clearwater River",
+              input.data=ch.dat25)
