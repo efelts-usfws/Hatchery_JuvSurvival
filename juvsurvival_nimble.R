@@ -51,9 +51,9 @@ parameters.to.save <- c("phi", "p")
 # do 10,000 iterations with a 1000 burn-in period
 # across 3 chains
 
-n.iter <- 5000
-n.burnin <- 1000
-n.chains <- 2
+n.iter <- 15000
+n.burnin <- 5000
+n.chains <- 3
 
 # write a function to filter capture history info
 # by release year and release site and then put those
@@ -199,7 +199,7 @@ chains_extract.f <- function(mcmc.object){
            descriptor="lgr_p",
            iteration=row_number())
   
-  p1.2 <- mcmc.object$chain1[,"p[1]"] %>% 
+  p1.2 <- mcmc.object$chain2[,"p[1]"] %>% 
     as_tibble() %>% 
     mutate(chain="2",
            descriptor="lgr_p",
@@ -211,7 +211,7 @@ chains_extract.f <- function(mcmc.object){
            descriptor="lgs_p",
            iteration=row_number())
   
-  p2.2 <- mcmc.object$chain1[,"p[2]"] %>% 
+  p2.2 <- mcmc.object$chain2[,"p[2]"] %>% 
     as_tibble() %>% 
     mutate(chain="2",
            descriptor="lgs_p",
@@ -223,7 +223,7 @@ chains_extract.f <- function(mcmc.object){
            descriptor="lomo_p",
            iteration=row_number())
   
-  p3.2 <- mcmc.object$chain1[,"p[3]"] %>% 
+  p3.2 <- mcmc.object$chain2[,"p[3]"] %>% 
     as_tibble() %>% 
     mutate(chain="2",
            descriptor="lomo_p",
@@ -235,7 +235,7 @@ chains_extract.f <- function(mcmc.object){
            descriptor="ich_p",
            iteration=row_number())
   
-  p4.2 <- mcmc.object$chain1[,"p[4]"] %>% 
+  p4.2 <- mcmc.object$chain2[,"p[4]"] %>% 
     as_tibble() %>% 
     mutate(chain="2",
            descriptor="ich_p",
@@ -247,7 +247,7 @@ chains_extract.f <- function(mcmc.object){
            descriptor="mcn_p",
            iteration=row_number())
   
-  p5.2 <- mcmc.object$chain1[,"p[5]"] %>% 
+  p5.2 <- mcmc.object$chain2[,"p[5]"] %>% 
     as_tibble() %>% 
     mutate(chain="2",
            descriptor="mcn_p",
@@ -259,7 +259,7 @@ chains_extract.f <- function(mcmc.object){
            descriptor="jda_p",
            iteration=row_number())
   
-  p6.2 <- mcmc.object$chain1[,"p[6]"] %>% 
+  p6.2 <- mcmc.object$chain2[,"p[6]"] %>% 
     as_tibble() %>% 
     mutate(chain="2",
            descriptor="jda_p",
@@ -271,7 +271,7 @@ chains_extract.f <- function(mcmc.object){
            descriptor="bon_p",
            iteration=row_number())
   
-  p7.2 <- mcmc.object$chain1[,"p[7]"] %>% 
+  p7.2 <- mcmc.object$chain2[,"p[7]"] %>% 
     as_tibble() %>% 
     mutate(chain="2",
            descriptor="bon_p",
@@ -283,7 +283,7 @@ chains_extract.f <- function(mcmc.object){
            descriptor="twx_p",
            iteration=row_number())
   
-  p8.2 <- mcmc.object$chain1[,"p[8]"] %>% 
+  p8.2 <- mcmc.object$chain2[,"p[8]"] %>% 
     as_tibble() %>% 
     mutate(chain="2",
            descriptor="twx_p",
