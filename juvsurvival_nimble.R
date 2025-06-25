@@ -330,6 +330,7 @@ initial.values <- function() list(phi = runif(constants.example$T-1,0,1),
 
 # run the nimble code (takes a while)
 
+tic()
 example.phitpt <- nimbleMCMC(code=hmm.phitpt,
                              constants=constants.example,
                              data=example.list,
@@ -338,6 +339,9 @@ example.phitpt <- nimbleMCMC(code=hmm.phitpt,
                              niter=n.iter,
                              nburnin=n.burnin,
                              nchains=n.chains)
+toc()
+
+
 
 # look through outputs/diagniostics
 
@@ -349,5 +353,11 @@ MCMCplot(object=example.phitpt,params="phi")
 MCMCtrace(object=example.phitpt,
           pdf=F,ind=TRUE,
           params="phi")
+
+MCMCtrace(object=example.phitpt,
+          pdf=F,ind=TRUE,
+          params="p")
+
+
 
 example.chains <- chains_extract.f(mcmc.object = example.phitpt)
