@@ -328,6 +328,21 @@ initial.values <- function() list(phi = runif(constants.example$T-1,0,1),
                                   p = runif(constants.example$T-1,0,1),
                                   z = zinits)
 
+# Precompile NIMBLE model 
+
+compiled_model <- nimbleModel(code=hmm.phitpt,
+                              constant=constants.example,
+                              data=example.list,
+                              inits=initial.values())
+
+compiled_model_c <- compileNimble(compiled_model)
+
+compiled_mcmc <- buildMCMC(compiled_model)
+
+compiled_mcmc_c <- compileNimble(compiled_mcmc,project=compiled_model_c)
+
+
+
 # run the nimble code (takes a while)
 
 tic()
