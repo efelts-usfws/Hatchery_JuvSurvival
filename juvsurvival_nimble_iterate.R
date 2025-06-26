@@ -142,7 +142,8 @@ test_group <- ch.dat25 |>
            spp=species,
            release.group=release_group,
            release.year=release_year) |> 
-  slice(1:2)
+  slice(1:2) |> 
+  mutate(group_index=row_number())
 
 
 
@@ -160,14 +161,59 @@ MCMCsummary(test_run[[2]],round=2)
 
 test_summary.tbl <- map2_dfr(
   .x=test_run,
-  .y=test_group,
-  .f=~ {
-  sum_tbl <-  MCMCsummary(.x, params=c("phi[1]","p[1]"),round=2) |> 
-    as_tibble(rownames="param") 
-    
-    bind_cols(.y, sum_tbl)
-  }
-)
+  1:length(test_run),
+  ~ MCMCsummary(.x, params=c("phi","p"),round=2) |> 
+    as_tibble(rownames="paramaeter") |> 
+    mutate(group_index=.y)
+) |> 
+  left_join(test_group,by="group_index")
+
+
+extract_chains_tbl <- function(mcmc_obj, group_index) { 
+  mcmc_obj %>%
+    map_dfr(as.data.frame, .id = "chain") %>%
+    pivot_longer(-chain, names_to = "param", values_to = "value") %>%
+    group_by(chain, param) %>%
+    mutate(iteration = row_number()) %>%
+    ungroup() %>%
+    mutate(group_index = group_index)
+}
+
+
+chains_extract.f <- function(mcmc_object, group_index) {
+  mcmc_object %>%
+    map_dfr(as.data.frame, .id = "chain") %>%
+    pivot_longer(-chain, names_to = "param", values_to = "value") %>%
+    group_by(chain, param) %>%
+    mutate(iteration = row_number()) %>%
+    ungroup() %>%
+    mutate(group_index = group_index)
+
+}
+
+
+# Join metadata
+all_chains_tbl <-map2_dfr(test_run,seq_along(test_run), chains_extract.f) |> 
+  left_join(test_group,by="group_index")
+
+# plot chain diagnostics, the main ones 
+# to look at are at LGR
+
+
+
+lgr_survival.chains <- all_chains_tbl |> 
+  filter(param=="phi[1]") |> 
+  ggplot(aes(x=iteration,y=value,color=chain))+
+  geom_line(alpha=0.8)+
+  facet_wrap(~release.group)+
+  theme_bw()
+lgr_survival.chains
+
+
+
+
+
+
 
 # write a function to extract paremeters of interest to export
 
