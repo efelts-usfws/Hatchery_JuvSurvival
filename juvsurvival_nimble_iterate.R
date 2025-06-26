@@ -141,22 +141,26 @@ test_group <- ch.dat25 |>
   distinct(hatchery.name=hatchery,
            spp=species,
            release.group=release_group,
-           release.year=release_year) |> 
-  mutate(group_index=row_number())
-
+           release.year=release_year) 
 
 
 plan(multisession,workers=15)
 
 
+tic()
 test_run <- future_pmap(test_group,
                         run_nimble_group.f,
                         input.dat=ch.dat25,
                         .progress = TRUE)
+toc()
+
 
 MCMCsummary(test_run[[2]],round=2)
 
 # get the posterior summaries from that run
+
+test_group_ref <- test_group |> 
+  mutate(group_index=row_number())
 
 test_summary.tbl <- map2_dfr(
   .x=test_run,
@@ -164,19 +168,10 @@ test_summary.tbl <- map2_dfr(
   ~ MCMCsummary(.x, params=c("phi","p"),round=2) |> 
     as_tibble(rownames="paramaeter") |> 
     mutate(group_index=.y)
-) |> 
-  left_join(test_group,by="group_index")
+)#|> 
+  left_join(test_group_ref,by="group_index")
 
 
-extract_chains_tbl <- function(mcmc_obj, group_index) { 
-  mcmc_obj %>%
-    map_dfr(as.data.frame, .id = "chain") %>%
-    pivot_longer(-chain, names_to = "param", values_to = "value") %>%
-    group_by(chain, param) %>%
-    mutate(iteration = row_number()) %>%
-    ungroup() %>%
-    mutate(group_index = group_index)
-}
 
 
 chains_extract.f <- function(mcmc_object, group_index) {
@@ -193,27 +188,35 @@ chains_extract.f <- function(mcmc_object, group_index) {
 
 # Join metadata
 all_chains_tbl <-map2_dfr(test_run,seq_along(test_run), chains_extract.f) |> 
-  left_join(test_group,by="group_index")
+  left_join(test_group_ref,by="group_index")
+
+saveRDS(test_summary.tbl,
+        "outputs/parameter_estimates_2025")
+
+saveRDS(all_chains_tbl)
 
 # plot chain diagnostics, the main ones 
-# to look at are at LGR
+# to look at are at LGR; chinook only here,
+# but steelhead are in the data set
 
 
 
 lgr_survival.chains <- all_chains_tbl |> 
-  filter(param=="phi[1]") |> 
+  filter(param=="phi[1]",
+         spp=="Chinook") |> 
   ggplot(aes(x=iteration,y=value,color=chain))+
   geom_line(alpha=0.8)+
-  facet_wrap(~release.group)+
+  facet_grid(hatchery.name~release.group)+
   theme_bw()
 lgr_survival.chains
 
 
 lgr_detection.chains <- all_chains_tbl |> 
-  filter(param=="p[1]") |> 
+  filter(param=="p[1]",
+         spp=="Chinook") |> 
   ggplot(aes(x=iteration,y=value,color=chain))+
   geom_line(alpha=0.8)+
-  facet_wrap(~release.group)+
+  facet_grid(hatchery.name~release.group)+
   theme_bw()
 lgr_detection.chains
 
