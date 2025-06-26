@@ -193,7 +193,8 @@ all_chains_tbl <-map2_dfr(test_run,seq_along(test_run), chains_extract.f) |>
 saveRDS(test_summary.tbl,
         "outputs/parameter_estimates_2025")
 
-saveRDS(all_chains_tbl)
+saveRDS(all_chains_tbl,
+        "outputs/chains_2025")
 
 # plot chain diagnostics, the main ones 
 # to look at are at LGR; chinook only here,
