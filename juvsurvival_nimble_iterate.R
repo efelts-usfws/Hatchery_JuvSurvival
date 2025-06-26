@@ -138,7 +138,10 @@ run_nimble_group.f <- function(hatchery.name,
 # for now try that function just on the clear creek chinook 
 
 test_group <- ch.dat25 |> 
-  distinct(hatchery,species,release_group,release_year) |> 
+  distinct(hatchery.name=hatchery,
+           spp=species,
+           release.group=release_group,
+           release.year=release_year) |> 
   slice(1:2)
 
 
@@ -147,8 +150,24 @@ plan(multisession,workers=2)
 
 
 test_run <- future_pmap(test_group,
-                        ~run_nimble_group.f(..1,..2,..3,..4,ch.dat25),
+                        run_nimble_group.f,
+                        input.dat=ch.dat25,
                         .progress = TRUE)
+
+MCMCsummary(test_run[[2]],round=2)
+
+# get the posterior summaries from that run
+
+test_summary.tbl <- map2_dfr(
+  .x=test_run,
+  .y=test_group,
+  .f=~ {
+  sum_tbl <-  MCMCsummary(.x, params=c("phi[1]","p[1]"),round=2) |> 
+    as_tibble(rownames="param") 
+    
+    bind_cols(.y, sum_tbl)
+  }
+)
 
 # write a function to extract paremeters of interest to export
 
