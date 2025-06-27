@@ -18,6 +18,12 @@ ch.dat25 <- read_rds("data/travel")|>
                                MCN_ch,JD_ch,BONN_ch,
                                TWX_ch,sep=""))
 
+tag.summary <- ch.dat25 |> 
+  group_by(species,hatchery,release_group,release_year) |> 
+  tally()
+
+
+
 
 # for now, just demonstrating one group, so filter steelhead
 # released from DNFH in the main clearwater
