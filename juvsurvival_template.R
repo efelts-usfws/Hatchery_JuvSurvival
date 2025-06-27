@@ -1,5 +1,6 @@
 library(tidyverse)
 library(RMark)
+library(tictoc)
 
 
 # the inputs here are capture histories which are compiled using
@@ -252,9 +253,14 @@ iteration.vars <- ch.dat25 |>
 
 # now run over all those groups 
 
+
+tic()
 estimates25 <- pmap(iteration.vars,
      cjs.f,
      input.data=ch.dat25)
+toc()
 
-test2 <- estimates25 |> 
+export25 <- estimates25 |> 
   bind_rows()
+
+saveRDS(export25,"outputs/rmark_parameter_estimates_2025")
